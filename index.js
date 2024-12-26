@@ -38,14 +38,14 @@ myBot.client.once(Events.ClientReady, readyClient => {
 
 
 
-
+/*
 myBot.client.once(Events.ClientReady, readyClient => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 
     const embed = new EmbedBuilder()
         .setColor('#12F2CB') // Custom border color
         .setTitle('Trade Helper Members Area')
-        .setDescription('Access the Members area of  our discord for Live Talks, Weekly Streams, and Full Tutorials on how to trade with A.I,')
+        .setDescription('Access the Members area of  our discord for Live Talks, Weekly Streams, and Full Tutorials on how to trade with A.I')
         .addFields({ name: 'Available', value: 'Full Community Access', inline: true })
         .setImage('https://i.imgur.com/xpsv5Xf.png');
 
@@ -60,6 +60,7 @@ myBot.client.once(Events.ClientReady, readyClient => {
     const channel = myBot.client.channels.cache.get('1020491005092442132');
     channel.send({ embeds: [embed], components: [row] });
 });
+*/
 
 
 
