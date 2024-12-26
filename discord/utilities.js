@@ -1,7 +1,8 @@
 
 
 const guildId = global.guildId;
-const roleId = global.roleId;
+const defaultRoleId = global.roleId;
+
 
 async function addRoleToUser(client, discordUserId) {
     try {
@@ -16,6 +17,25 @@ async function addRoleToUser(client, discordUserId) {
         console.log(`Role added to user ${discordUserId}`);
     } catch (error) {
         console.error('Error adding role to user:', error);
+    }
+}
+
+/**
+ * Add a *specific* role to a user, given a roleId.
+ */
+async function addSpecificRoleToUser(client, discordUserId, roleId) {
+    try {
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) throw new Error('Guild not found');
+
+        const role = guild.roles.cache.get(roleId);
+        if (!role) throw new Error('Role not found');
+
+        const member = await guild.members.fetch(discordUserId);
+        await member.roles.add(role);
+        console.log(`Role (${roleId}) added to user ${discordUserId}`);
+    } catch (error) {
+        console.error('Error adding specific role to user:', error);
     }
 }
 
@@ -39,15 +59,13 @@ async function doesUserHaveRole(client, userId) {
     try {
         const guild = await client.guilds.fetch(guildId);
         const member = await guild.members.fetch(userId);
-         
-        // Check if the member has the role
-        return member.roles.cache.has(roleId);
+        // Check if the member has the default role
+        return member.roles.cache.has(defaultRoleId);
     } catch (error) {
         console.error('Error checking user role:', error);
         return false;
     }
 }
-
 
 async function messageUserForUpdate(client, discordUserId) {
     try {
@@ -56,7 +74,7 @@ async function messageUserForUpdate(client, discordUserId) {
         if (!user) throw new Error('User not found');
 
         // Send a DM to the user
-        await user.send("There's an issue with your account. To regain access login to http://members.richbynoon.live and update your account information");
+        await user.send("There's an issue with your account. To regain access login to https://app.tradehelper.ai/settings/billing and update your account information");
         console.log(`Message sent to user ${discordUserId}`);
     } catch (error) {
         console.error('Error sending message to user:', error);
@@ -67,6 +85,7 @@ async function messageUserForUpdate(client, discordUserId) {
 
 module.exports = {
     addRoleToUser,
+    addSpecificRoleToUser,
     removeRoleFromUser,
     doesUserHaveRole,
     messageUserForUpdate

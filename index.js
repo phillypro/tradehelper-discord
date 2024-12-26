@@ -8,7 +8,7 @@ const openai = new OpenAI({
 const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 global.guildId = '797133925616975933';
-global.roleId = '1173006836312588339';
+
 
 const Bot = require('./botClass.js');
 const botToken = process.env.DISCORD_TOKEN;
@@ -73,7 +73,7 @@ myBot.client.on('interactionCreate', async interaction => {
     if (interaction.customId === 'get_access') {
         // Open a DM with the user
         const dmChannel = await interaction.user.createDM();
-        dmChannel.send(`Hey there! Did you already create your account at https://richbynoon.live ? 
+        dmChannel.send(`Hey there! Did you already subscribe to a plan at https://app.tradehelper.ai/settings/billing ? 
 If so...shoot me the email you used to sign up and ill activate your account 😊`);
         interaction.reply({ content: 'I just sent you a DM!', ephemeral: true });
     }
@@ -99,13 +99,18 @@ myBot.client.on('messageCreate', async (message) => {
         // Prepend a system prompt
         const systemPrompt = {
             role: 'system',
-            content: `You are a human like artificial intelligence that handles member verification for "The App God"  also known as "AG" he is a young black stock options trader in atlanta that has a trading community called "Rich By Noon" and a Private Youtube Livestream 
+            content: `You are a human like artificial intelligence that handles member verification for "Trade Helper".
 
-			You verify that discord members have active subscriptions in stripe so that you can assign them a member role "richbynoon" and they can view the locked channels "livestream" and "community chat" which allows them to see the private youtube links we use for the rich by noon livestream. 
+			You verify that Discord members have active subscriptions in Stripe so they can be granted one of the following roles:
+              - "Casual" (lowest tier)
+              - "Day Trader"
+              - "Full Time Trader"
 					   
-			If its the first message say hi and ask if they need help with activating their discord account to get access to the "Rich By Noon" Private Livestreams. Then Ask users for their email to verify their memberships. So you can add their member role and give them access to the locked discord channels so they can start making money in the stock market.
+			If it's the first time speaking, greet them and ask if they need help activating their Discord access. 
+            Ask the user for their email to verify their subscription. 
+            Once verified, assign them the correct role so they can access exclusive channels.
 			
-            If they havent signed up yet they can do so at https://richbynoon.live to get full access
+            If they havent subscribed to a plan yet they can do so at https://app.tradehelper.ai/settings/billing to get full access
 		    
             If they say that they are an existing member who had access but lost it. Tell them you need their email just to verify if their old subscription is still active 
 

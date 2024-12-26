@@ -1,7 +1,7 @@
 {
-  "name": "discord-bot",
+  "name": "tradehelper-discord",
   "version": "1.0.0",
-  "description": "Discord bot to manage Rich By Noon",
+  "description": "Discord bot to manage Trade Helper Members",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
