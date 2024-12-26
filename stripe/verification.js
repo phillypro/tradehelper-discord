@@ -1,100 +1,127 @@
 // stripe/verification.js
+
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { 
-  addSpecificRoleToUser
-} = require('../discord/utilities.js');
+const { addSpecificRoleToUser } = require('../discord/utilities');
 
+/**
+ * Checks if a user has an active subscription in Stripe.
+ * If active, assigns the correct Discord role based on the Stripe Product name.
+ */
 async function checkforActiveSubscription(client, customerEmail, discordUserId) {
-    console.log('Checking for active subscription...');
-    customerEmail = customerEmail.toLowerCase();
-    
-    // 1) Retrieve customer by email
-    let customers = await stripe.customers.list({ email: customerEmail });
-    if (customers.data.length === 0) {
-        // Attempt second fetch
-        const newCustomers = await stripe.customers.list({ limit: 100 });
-        const matchingCustomers = newCustomers.data.filter(newCustomer => 
-            newCustomer.email?.toLowerCase() === customerEmail
-        );
-        if (matchingCustomers.length > 0) {
-            customers.data = matchingCustomers;
-        } else {
-            return 'No customer found with that email.';
-        } 
-    }
+  console.log('[checkforActiveSubscription] Called with:', { customerEmail, discordUserId });
 
-    let pastDueSubscriptionFound = false;
-    let cancelledSubscriptionFound = false;
-    let responseMessage = '';
+  // Convert email to lowercase to avoid matching issues
+  customerEmail = customerEmail.toLowerCase();
 
-    // 2) Check subscriptions for each matching customer
-    for (const customer of customers.data) {
-        const subscriptions = await stripe.subscriptions.list({
-            customer: customer.id,
-            status: 'all',
-            expand: ['data.latest_invoice', 'data.items.price.product']
-        });
-        
-        for (const subscription of subscriptions.data) {
-            const status = subscription.status;
+  // 1) Retrieve matching customers by email
+  let customers = await stripe.customers.list({ email: customerEmail });
+  console.log('[checkforActiveSubscription] Initial customers found:', customers.data.length);
 
-            // If subscription is active or trialing, 
-            //  check the name of the product or price to see which role they get.
-            if (status === 'active' || status === 'trialing') {
+  if (customers.data.length === 0) {
+    // Attempt a broader fetch if none found
+    console.log('[checkforActiveSubscription] No direct match found; fetching all customers...');
+    const allCustomers = await stripe.customers.list({ limit: 100 });
+    const matchingCustomers = allCustomers.data.filter(
+      (cust) => cust.email?.toLowerCase() === customerEmail
+    );
 
-                // Update Stripe metadata
-                await stripe.customers.update(customer.id, {
-                    metadata: { discord: discordUserId }
-                });
-
-                // Identify the product name or plan name (depends on how your Stripe is set up)
-                // subscription.items.data[0].price.product.name might differ in your setup
-                let productName = '';
-                if (
-                  subscription.items &&
-                  subscription.items.data &&
-                  subscription.items.data.length > 0 &&
-                  subscription.items.data[0].price &&
-                  subscription.items.data[0].price.product
-                ) {
-                  productName = subscription.items.data[0].price.product.name.toLowerCase();
-                }
-
-                // Decide which role to add
-                if (productName.includes('casual')) {
-                    // CASUAL TIER
-                    await addSpecificRoleToUser(client, discordUserId, '1321766746604179518');
-                } else if (productName.includes('day')) {
-                    // DAY TIER
-                    await addSpecificRoleToUser(client, discordUserId, '1321766105064411166');
-                } else if (productName.includes('full time')) {
-                    // FULL TIME TIER
-                    await addSpecificRoleToUser(client, discordUserId, '1321766391442964491');
-                } else {
-                    // If no match, you can default to some fallback or do nothing
-                    // For example, a fallback role or a message.
-                }
-
-                return 'Subscription is active. Correct role has been assigned.';
-            }
-            else if (status === 'past_due') {
-                pastDueSubscriptionFound = true;
-                responseMessage = `Found a subscription but it's past due. Please complete payment at this link: ${subscription.latest_invoice.hosted_invoice_url}`;
-            }
-            else if (status === 'canceled') {
-                cancelledSubscriptionFound = true;
-            }
-        }
-    }
-
-    // 3) After checking all subs
-    if (pastDueSubscriptionFound) {
-        return responseMessage;
-    } else if (cancelledSubscriptionFound) {
-        return 'We found the account but the subscription is canceled. Please re-subscribe at https://app.tradehelper.ai/settings/billing';
+    if (matchingCustomers.length === 0) {
+      console.log('[checkforActiveSubscription] Still no matching customer found.');
+      return 'No customer found with that email.';
     } else {
-        return 'We found the account in Stripe, but there is no active subscription. Please sign up at https://app.tradehelper.ai/settings/billing';
+      console.log('[checkforActiveSubscription] Found matching customer(s) with broader fetch:', matchingCustomers.length);
+      customers.data = matchingCustomers;
     }
+  }
+
+  let pastDueSubscriptionFound = false;
+  let cancelledSubscriptionFound = false;
+  let responseMessage = '';
+
+  // 2) For each matching customer, get their subscriptions (all statuses)
+  for (const customer of customers.data) {
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customer.id,
+      status: 'all',
+      expand: ['data.latest_invoice'],
+    });
+    console.log('[checkforActiveSubscription] Checking subscriptions for customer ID:', customer.id);
+
+    for (const subscription of subscriptions.data) {
+      const status = subscription.status;
+      console.log('[checkforActiveSubscription] Subscription status:', status);
+
+      // Check if subscription is active or trialing
+      if (status === 'active' || status === 'trialing') {
+        // 2a) Update Stripe metadata with Discord ID
+        await stripe.customers.update(customer.id, {
+          metadata: { discord: discordUserId },
+        });
+        console.log('[checkforActiveSubscription] Subscription is active/trialing. Updating Discord ID in metadata.');
+
+        // 2b) Determine the Product name from the subscription item
+        const subItem = subscription.items?.data?.[0];
+        if (!subItem) {
+          console.log('[checkforActiveSubscription] No subscription items found. Skipping.');
+          continue;
+        }
+
+        // Prefer the price.product, otherwise fallback to plan.product
+        const productId = subItem.price?.product || subItem.plan?.product;
+        if (!productId) {
+          console.log('[checkforActiveSubscription] No product found on the subscription item. Skipping role assignment.');
+          continue;
+        }
+
+        // Fetch the Stripe product to get its name
+        let productName = '';
+        try {
+          const product = await stripe.products.retrieve(productId);
+          productName = product.name.toLowerCase();
+          console.log('[checkforActiveSubscription] Retrieved product name:', product.name);
+        } catch (error) {
+          console.error('[checkforActiveSubscription] Error fetching product:', error);
+        }
+
+        // 2c) Assign the correct role based on the product name
+        // Adjust the condition checks to match your Stripe product names.
+        if (productName.includes('casual')) {
+          await addSpecificRoleToUser(client, discordUserId, '1321766746604179518');
+          console.log('[checkforActiveSubscription] Assigned "casual" role.');
+        } else if (productName.includes('day')) {
+          await addSpecificRoleToUser(client, discordUserId, '1321766105064411166');
+          console.log('[checkforActiveSubscription] Assigned "day" role.');
+        } else if (productName.includes('full time')) {
+          await addSpecificRoleToUser(client, discordUserId, '1321766391442964491');
+          console.log('[checkforActiveSubscription] Assigned "full time" role.');
+        }
+        // else: no match → optionally do nothing or fallback
+
+        // Subscription is valid; return immediately so we stop checking others
+        return 'Subscription is active. The correct role has been assigned.';
+      }
+
+      // Handle other statuses
+      if (status === 'past_due') {
+        pastDueSubscriptionFound = true;
+        responseMessage = `Found a subscription but it's past due. Please complete payment at this link: ${subscription.latest_invoice?.hosted_invoice_url || ''}`;
+      } else if (status === 'canceled') {
+        cancelledSubscriptionFound = true;
+      }
+    }
+  }
+
+  // 3) Determine final message based on what was found
+  if (pastDueSubscriptionFound) {
+    console.log('[checkforActiveSubscription] Past due subscription detected.');
+    return responseMessage;
+  } else if (cancelledSubscriptionFound) {
+    console.log('[checkforActiveSubscription] Canceled subscription detected.');
+    return 'We found the account but the subscription is canceled. Please re-subscribe at https://app.tradehelper.ai/settings/billing';
+  } else {
+    console.log('[checkforActiveSubscription] No active subscription found.');
+    return 'We found the account in Stripe, but there is no active subscription. Please sign up at https://app.tradehelper.ai/settings/billing';
+  }
 }
 
 module.exports = { checkforActiveSubscription };
