@@ -38,16 +38,16 @@ myBot.client.once(Events.ClientReady, readyClient => {
 
 
 
-/*
+
 myBot.client.once(Events.ClientReady, readyClient => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 
     const embed = new EmbedBuilder()
-        .setColor('#62E643') // Custom border color
-        .setTitle('Exclusive Access to Rich By Noon')
-        .setDescription('For access to the money making members only Livestreams and Community chats "Rich By Noon",')
-        .addFields({ name: 'Available', value: '24/7 Access 💰🤑', inline: true })
-        .setImage('https://i.imgur.com/oI9k9PL.jpg');
+        .setColor('#12F2CB') // Custom border color
+        .setTitle('Trade Helper Members Area')
+        .setDescription('Access the Members area of  our discord for Live Talks, Weekly Streams, and Full Tutorials on how to trade with A.I,')
+        .addFields({ name: 'Available', value: 'Full Community Access', inline: true })
+        .setImage('https://i.imgur.com/xpsv5Xf.png');
 
     const row = new ActionRowBuilder()
         .addComponents(
@@ -60,7 +60,7 @@ myBot.client.once(Events.ClientReady, readyClient => {
     const channel = myBot.client.channels.cache.get('1020491005092442132');
     channel.send({ embeds: [embed], components: [row] });
 });
-*/
+
 
 
 // Log in to Discord with your client's token
