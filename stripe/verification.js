@@ -2,6 +2,8 @@
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { addSpecificRoleToUser } = require('../discord/utilities');
+const { notifyDiscordVerified } = require('../discord/sellblue');  // <-- ADD THIS
+
 
 /**
  * Checks if a user has an active subscription in Stripe.
@@ -96,6 +98,11 @@ async function checkforActiveSubscription(client, customerEmail, discordUserId) 
           console.log('[checkforActiveSubscription] Assigned "full time" role.');
         }
         // else: no match → optionally do nothing or fallback
+
+        await notifyDiscordVerified({
+          phoneNumber: customer.phone, 
+          name: customer.name
+        });
 
         // Subscription is valid; return immediately so we stop checking others
         return 'Subscription is active. The correct role has been assigned.';

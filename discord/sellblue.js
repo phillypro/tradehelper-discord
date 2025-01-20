@@ -1,48 +1,63 @@
+// discord/sellblue.js
+const axios = require('axios');
 
-async function welcomeCustomer(customer) {
+async function notifyDiscordVerified({ phoneNumber, name }) {
+  if (!phoneNumber || !name) {
+    console.log('notifyDiscordVerified: Missing phoneNumber or name, skipping SellBlue message.');
+    return;
+  }
 
-    let fullName = customer['name']; // Assuming customer['name'] is a string like "John Doe"
-    let firstName = fullName.split(' ')[0]; // Splits the string by space and takes the first part
+  // If you store SellBlue creds in ENV, load them here:
+  const sellBlueApiKey = process.env.VITE_SELLBLUE_API_KEY;
+  const sellBlueUserId = process.env.VITE_SELLBLUE_USER_ID;
+  const sellBluePhoneNumberId = process.env.VITE_SELLBLUE_PHONE_NUMBER_ID;
+  const sellBlueAssistantId = process.env.VITE_SELLBLUE_ASSISTANT_ID;
+  const sellBlueApiKeyValue = process.env.VITE_SELLBLUE_API_KEY_VALUE;
 
+  // Make sure these are actually defined in your environment:
+  if (!sellBlueApiKey || !sellBlueUserId || !sellBluePhoneNumberId || !sellBlueAssistantId) {
+    console.error('notifyDiscordVerified: SellBlue API environment variables not configured.');
+    return;
+  }
 
-    // Calculate the scheduled time (one hour from now)
-    const scheduledTime = new Date(new Date().getTime() + 10 * 60 * 1000); // 10 minutes later
-    const scheduledTimeISOString = scheduledTime.toISOString();
+  // Basic name splitting:
+  const [ firstName, ...rest ] = name.split(' ');
+  const lastName = rest.join(' ') || '';
 
+  // Example text
+  const messageText = `Saw you got discord access`;
 
-    // Construct the message
-    const messageText = ``;
+  // NOTE: If SellBlue interprets scheduledAt as "minutes from now," then `2` is 2 minutes from now
+  const messageData = {
+    text: messageText,
+    recipient: phoneNumber,
+    name: `${firstName} ${lastName}`,
+    assistant: sellBlueAssistantId,
+    scheduledAt: 2,
+    phoneNumberId: sellBluePhoneNumberId,
+    conversationgroup: 'Active Member With Discord',
+    existingSkip: false
+  };
 
-    // Construct the JSON object for the request
-    const messageData = {
-        text: messageText,
-        recipient: customer['phone'],
-        name: customer['name'],
-        assistant: "64b31498e645e9f2ae7f25f8",
-        sms: false,
-        voice: false,
-        scheduledAt: scheduledTimeISOString,
-        customInstructions: `${firstName} just signed up to the rich by noon trial 10 minutes ago. You just checked and want to congratulate them and walk them through activating their account in the discord if they need any help`
-    };
-      
-    
+  // If you want to set an "existingText":
+  // messageData.existingText = "I see you're all set up in Discord now! Let’s get you going...";
 
-    // Send the request to the endpoint
-    const response = await fetch('https://api.sellblue.ai/api/v1/message/outbound', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'c0a9b35b8e9d400bea0e1da502bed5ad',
-            'userid': '64b646ad85120c084f2f1c38',
-            'api-Key': '123'
-        },
-        body: JSON.stringify(messageData),
-        mode: 'cors'  // Setting no-cors mode
+  try {
+    const response = await axios.post('https://api.sellblue.ai/api/v1/message/outbound', messageData, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: sellBlueApiKey,
+        userid: sellBlueUserId,
+        'api-Key': sellBlueApiKeyValue
+      },
     });
-
-    return response.json();
+    console.log('notifyDiscordVerified: SellBlue response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('notifyDiscordVerified: SellBlue API error:', error.response?.data || error.message);
+  }
 }
 
 module.exports = {
-    welcomeCustomer
+  notifyDiscordVerified
 };
