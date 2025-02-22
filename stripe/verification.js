@@ -48,7 +48,7 @@ async function checkforActiveSubscription(client, customerEmail, discordUserId) 
       expand: ['data.latest_invoice'],
     });
     console.log('[checkforActiveSubscription] Checking subscriptions for customer ID:', customer.id);
-
+    console.log(subscriptions.data);
     for (const subscription of subscriptions.data) {
       const status = subscription.status;
       console.log('[checkforActiveSubscription] Subscription status:', status);
