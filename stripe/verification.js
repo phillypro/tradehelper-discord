@@ -13,11 +13,12 @@ async function checkforActiveSubscription(client, customerEmail, discordUserId) 
   console.log('[checkforActiveSubscription] Called with:', { customerEmail, discordUserId });
 
   // Convert email to lowercase to avoid matching issues
-  customerEmail = customerEmail.toLowerCase();
+  customerEmail = customerEmail;
 
   // 1) Retrieve matching customers by email
-  let customers = await stripe.customers.list({ email: customerEmail });
+  let customers = await stripe.customers.list({ email: customerEmail, limit: 100 });
   console.log('[checkforActiveSubscription] Initial customers found:', customers.data.length);
+
 
   if (customers.data.length === 0) {
     // Attempt a broader fetch if none found
@@ -33,7 +34,7 @@ async function checkforActiveSubscription(client, customerEmail, discordUserId) 
     } else {
       console.log('[checkforActiveSubscription] Found matching customer(s) with broader fetch:', matchingCustomers.length);
       customers.data = matchingCustomers;
-    }
+    }0
   }
 
   let pastDueSubscriptionFound = false;
